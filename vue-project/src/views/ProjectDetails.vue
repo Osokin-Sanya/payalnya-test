@@ -109,6 +109,7 @@ const router = useRouter()
 const projectStore = useProjectStore()
 const taskStore = useTaskStore()
 const userStore = useUserStore()
+console.log(userStore.users);
 
 const projectId = computed(() => route.params.id as string)
 const project = computed(() => projectStore.getProjectById(projectId.value))
@@ -154,6 +155,8 @@ watch(
 
 const handleDragEnd = async (event: any) => {
   const task = event.item.__draggable_context.element
+  console.log(event);
+  
   const newStatus = event.to.parentElement.getAttribute('data-status')
   const newIndex = event.newIndex
 
@@ -248,12 +251,13 @@ onMounted(async () => {
       await projectStore.fetchProjects()
     }
     await taskStore.fetchProjectTasks()
+    await userStore.fetchUsers()
   } catch (error) {
     console.error('Failed to initialize project details:', error)
     router.push({ name: 'projects' })
   }
 })
-
+ 
 onBeforeUnmount(() => {
   taskStore.clearState()
 })

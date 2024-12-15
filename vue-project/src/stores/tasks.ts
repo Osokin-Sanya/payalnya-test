@@ -55,7 +55,7 @@ export const useTaskStore = defineStore('tasks', {
     async createTask(task: Omit<Task, 'id'>) {
       try {
         const { data } = await taskApi.create(task)
-        this.tasks.push(data)
+        // this.tasks.push(data)
         return data
       } catch (err) {
         this.error = 'Failed to create task'
@@ -73,25 +73,24 @@ export const useTaskStore = defineStore('tasks', {
     async updateTask(id: string, updates: Partial<Task>) {
       const index = this.tasks.findIndex((t) => t.id === id)
 
-      if (index !== -1) {
-        try {
-          const updatedTask = { ...this.tasks[index], ...updates }
-          this.tasks[index] = updatedTask
+      if (index === -1) return
+      try {
+        const updatedTask = { ...this.tasks[index], ...updates }
+        this.tasks[index] = updatedTask
 
-          const { data } = await taskApi.update(id, updates)
-          this.tasks[index] = data
+        const { data } = await taskApi.update(id, updates)
+        this.tasks[index] = data
 
-          const projectStore = useProjectStore()
-          await projectStore.updateProjectStatus(data.projectId)
+        const projectStore = useProjectStore()
+        await projectStore.updateProjectStatus(data.projectId)
 
-          return data
-        } catch (err) {
-          // Відкатування змін в разі помилки
-          await this.fetchProjectTasks()
-          this.error = 'Failed to update task'
-          console.error(err)
-          throw err
-        }
+        return data
+      } catch (err) {
+        // Відкатування змін в разі помилки
+        await this.fetchProjectTasks()
+        this.error = 'Failed to update task'
+        console.error(err)
+        throw err
       }
     },
 

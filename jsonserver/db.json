@@ -11,7 +11,7 @@
       "id": "1a2b",
       "name": "E-Commerce Website",
       "description": "Build a full-stack e-commerce platform.",
-      "status": "completed",
+      "status": "new",
       "createdAt": 1734036513500
     },
     {
@@ -41,6 +41,13 @@
       "description": "Build a web app to track and analyze sales data.",
       "status": "completed",
       "createdAt": 1734040513800
+    },
+    {
+      "id": "90b5",
+      "name": "Влад",
+      "description": "Создать",
+      "status": "in-progress",
+      "createdAt": 1734289522034
     }
   ],
   "tasks": [
@@ -63,34 +70,38 @@
     {
       "projectId": "1a2b",
       "name": "Implement product listing page",
-      "status": "done",
+      "status": "new",
       "assignedTo": "2",
       "endDate": null,
-      "id": "m4n5"
+      "id": "m4n5",
+      "order": 0
     },
     {
       "projectId": "1a2b",
       "name": "Add shopping cart feature",
-      "status": "done",
+      "status": "new",
       "assignedTo": null,
       "endDate": null,
-      "id": "o6p7"
+      "id": "o6p7",
+      "order": 0
     },
     {
       "projectId": "4e5f",
       "name": "Set up blog post editor",
-      "status": "in-progress",
+      "status": "new",
       "assignedTo": "1",
       "endDate": null,
-      "id": "u3v4"
+      "id": "u3v4",
+      "order": 0
     },
     {
       "projectId": "4e5f",
       "name": "Implement user authentication",
-      "status": "new",
+      "status": "in-progress",
       "assignedTo": "3",
       "endDate": null,
-      "id": "w5x6"
+      "id": "w5x6",
+      "order": 0
     },
     {
       "projectId": "5g6h",
@@ -131,6 +142,24 @@
       "assignedTo": null,
       "endDate": null,
       "id": "d9ba"
+    },
+    {
+      "id": "4306",
+      "projectId": "90b5",
+      "name": "ыыыы",
+      "status": "done",
+      "assignedTo": null,
+      "endDate": null,
+      "order": 0
+    },
+    {
+      "id": "1eb2",
+      "projectId": "90b5",
+      "name": "s",
+      "status": "in-progress",
+      "assignedTo": null,
+      "endDate": null,
+      "order": 0
     }
   ],
   "users": [
