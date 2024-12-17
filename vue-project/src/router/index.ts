@@ -1,34 +1,22 @@
-import { createRouter, createWebHistory } from 'vue-router'
-
-import ProjectList from '@/views/ProjectList.vue'
-import ProjectDetails from '@/views/ProjectDetails.vue'
+import ProjectDetails from "@/views/ProjectDetails.vue";
+import ProjectList from "@/views/ProjectList.vue";
+import { createRouter, createWebHistory } from "vue-router";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
-      name: 'projects',
+      path: "/",
+      name: "projects",
       component: ProjectList,
     },
     {
-      path: '/project/:id',
-      name: 'project-details',
+      path: "/project/:id",
+      name: "project-details",
       component: ProjectDetails,
       props: true,
-
-      beforeEnter: async (to, from) => {
-        const projectId = to.params.id
-        if (!projectId) return { name: 'projects' }
-        return true
-      },
     },
   ],
-})
+});
 
-router.onError((error) => {
-  console.error('Router error:', error)
-  router.push({ name: 'projects' })
-})
-
-export default router
+export default router;

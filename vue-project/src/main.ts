@@ -1,19 +1,14 @@
-import './assets/main.scss'
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import App from './App.vue'
-import router from './router'
+import "./assets/main.scss";
 
-const app = createApp(App)
-const pinia = createPinia()
+import { createApp } from "vue";
+import { createPinia } from "pinia";
 
-// Обробка помилок на рівні додатка
-app.config.errorHandler = (err, instance, info) => {
-  console.error('Global error:', err)
-  console.error('Error info:', info)
-}
+import App from "./App.vue";
+import router from "./router";
 
-app.use(pinia)
-app.use(router)
+const app = createApp(App);
 
-app.mount('#app')
+app.use(createPinia());
+app.use(router);
+
+app.mount("#app");

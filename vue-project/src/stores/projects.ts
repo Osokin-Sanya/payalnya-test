@@ -1,17 +1,12 @@
-import { defineStore } from 'pinia'
-import type { Project } from '@/types'
-import { services } from '@/services'
-import { updateProjectStatus } from '@/utils/projectStatus'
-import { useTaskStore } from './tasks'
+import { defineStore } from "pinia";
+import type { Project, ProjectStatus } from "@/types";
+import { services } from "@/services";
 
-const { projects: projectApi } = services
+import { useTaskStore } from "./tasks";
 
-/**
- * Сховище для керування проектами
- * Забезпечує централізоване управління станом проектів,
- * включаючи створення, оновлення та автоматичне оновлення статусу
- */
-export const useProjectStore = defineStore('projects', {
+const { projects: projectApi } = services;
+
+export const useProjectStore = defineStore("projects", {
   state: () => ({
     projects: [] as Project[],
     loading: false,
@@ -19,78 +14,101 @@ export const useProjectStore = defineStore('projects', {
   }),
 
   getters: {
-    getProjectById: (state) => (id: string) => state.projects.find((p) => p.id === id),
+    getProjectById: (state) => (id: string) =>
+      state.projects.find((p) => p.id === id),
   },
 
   actions: {
     async fetchProjects() {
-      this.loading = true
+      this.loading = true;
       try {
-        const { data } = await projectApi.getAll()
-        this.projects = data
-
-        const taskStore = useTaskStore()
-        this.projects = this.projects.map((project) => {
-          const projectTasks = taskStore.getTasksByProject(project.id)
-          return updateProjectStatus(project, projectTasks)
-        })
+        const { data } = await projectApi.getAll();
+        this.projects = data;
       } catch (err) {
-        this.error = 'Failed to fetch projects'
-        console.error(err)
+        this.error = "Failed to fetch projects";
+        console.error(err);
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
-    async createProject(project: Omit<Project, 'id'>) {
+    async createProject(project: Omit<Project, "id">) {
+      this.fetchProjects();
+
       try {
-        const { data } = await projectApi.create(project)
-        this.projects.push(data)
-        return data
+        const { data } = await projectApi.create(project);
+        this.projects.push(data);
+        return data;
       } catch (err) {
-        this.error = 'Failed to create project'
-        console.error(err)
-        throw err
+        this.error = "Failed to create project";
+        console.error(err);
+        throw err;
       }
     },
 
-    /**
-     * Оновлює статус проекту на основі статусів його завдань
-     */
     async updateProjectStatus(projectId: string) {
-      const project = this.projects.find((p) => p.id === projectId)
-      if (!project) return
+      try {
+        // Отримуємо tasks, пов'язані з проектом
+        const taskStore = useTaskStore();
+        const tasks = taskStore.getTasksByProject(projectId);
 
-      const taskStore = useTaskStore()
-      const projectTasks = taskStore.getTasksByProject(projectId)
-      const updatedProject = updateProjectStatus(project, projectTasks)
-
-      if (updatedProject !== project) {
-        try {
-          const { data } = await projectApi.update(projectId, {
-            ...project,
-            status: updatedProject.status,
-          })
-          const index = this.projects.findIndex((p) => p.id === projectId)
-          if (index !== -1) {
-            this.projects[index] = data
-          }
-        } catch (err) {
-          this.error = 'Failed to update project status'
-          console.error(err)
+        if (!tasks || tasks.length === 0) {
+          console.warn("No tasks found for this project");
+          return;
         }
+
+        // Визначаємо новий статус проекту
+        let newStatus: ProjectStatus = "new";
+        const hasInProgressTasks = tasks.some(
+          (task) => task.status === "in-progress"
+        );
+        const hasDoneTasks = tasks.every((task) => task.status === "done");
+
+        if (hasDoneTasks) {
+          newStatus = "completed" as ProjectStatus;
+        } else if (hasInProgressTasks) {
+          newStatus = "in-progress";
+        }
+
+        // Знаходимо проект
+        const project = this.getProjectById(projectId);
+        if (!project) {
+          console.error("Project not found");
+          return;
+        }
+
+        // Якщо статус не змінився, виходимо
+        if (project.status === newStatus) {
+          console.log("Status is already up to date");
+          return;
+        }
+
+        // Оновлюємо статус проекту, зберігаючи всі інші поля
+        const updatedProject = {
+          ...project,
+          status: newStatus,
+        };
+        // Оновлюємо проект на сервері
+        await services.projects.update(projectId, updatedProject);
+
+        // Оновлюємо локальний стан
+        project.status = newStatus;
+        console.log(`Project ${projectId} status updated to ${newStatus}`);
+      } catch (err) {
+        console.error("Failed to update project status", err);
+        throw err;
       }
     },
 
     async deleteProject(id: string) {
       try {
-        await projectApi.delete(id)
-        this.projects = this.projects.filter((p) => p.id !== id)
+        await projectApi.delete(id);
+        this.projects = this.projects.filter((p) => p.id !== id);
       } catch (err) {
-        this.error = 'Failed to delete project'
-        console.error(err)
-        throw err
+        this.error = "Failed to delete project";
+        console.error(err);
+        throw err;
       }
     },
   },
-})
+});

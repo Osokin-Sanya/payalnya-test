@@ -4,28 +4,28 @@
       "id": "0df4",
       "name": "UI Component Library",
       "description": "Develop a reusable component library for internal projects.",
-      "status": "new",
+      "status": "completed",
       "createdAt": 1734036513500
     },
     {
       "id": "1a2b",
       "name": "E-Commerce Website",
       "description": "Build a full-stack e-commerce platform.",
-      "status": "new",
+      "status": "in-progress",
       "createdAt": 1734036513500
     },
     {
       "id": "3c4d",
       "name": "Mobile App Design",
       "description": "Create UI/UX designs for the mobile application.",
-      "status": "completed",
+      "status": "new",
       "createdAt": 1734036513500
     },
     {
       "id": "4e5f",
       "name": "Blog Platform",
       "description": "Develop a blogging platform with customizable templates.",
-      "status": "new",
+      "status": "in-progress",
       "createdAt": 1734040513800
     },
     {
@@ -43,65 +43,72 @@
       "createdAt": 1734040513800
     },
     {
-      "id": "90b5",
-      "name": "Влад",
-      "description": "Создать",
-      "status": "in-progress",
-      "createdAt": 1734289522034
+      "id": "220d",
+      "name": "Test Project1",
+      "description": "",
+      "status": "new",
+      "createdAt": 1734401419902
+    },
+    {
+      "id": "f11b",
+      "name": "Test Project 2",
+      "description": "",
+      "status": "new",
+      "createdAt": 1734401432233
     }
   ],
   "tasks": [
     {
       "projectId": "0df4",
       "name": "Develop button component",
-      "status": "new",
+      "status": "done",
       "assignedTo": null,
       "endDate": null,
+      "order": 1,
       "id": "d2d3"
     },
     {
       "projectId": "0df4",
       "name": "Create table component",
-      "status": "new",
+      "status": "done",
       "assignedTo": "1",
       "endDate": 1734548719284,
+      "order": 0,
       "id": "k2i3"
     },
     {
       "projectId": "1a2b",
       "name": "Implement product listing page",
-      "status": "new",
+      "status": "in-progress",
       "assignedTo": "2",
       "endDate": null,
-      "id": "m4n5",
-      "order": 0
+      "order": 0,
+      "id": "m4n5"
     },
     {
       "projectId": "1a2b",
       "name": "Add shopping cart feature",
-      "status": "new",
+      "status": "in-progress",
       "assignedTo": null,
       "endDate": null,
-      "id": "o6p7",
-      "order": 0
+      "order": 0,
+      "id": "o6p7"
     },
     {
       "projectId": "4e5f",
       "name": "Set up blog post editor",
-      "status": "new",
+      "status": "in-progress",
       "assignedTo": "1",
       "endDate": null,
-      "id": "u3v4",
-      "order": 0
+      "id": "u3v4"
     },
     {
       "projectId": "4e5f",
       "name": "Implement user authentication",
-      "status": "in-progress",
+      "status": "new",
       "assignedTo": "3",
       "endDate": null,
-      "id": "w5x6",
-      "order": 0
+      "id": "w5x6"
     },
     {
       "projectId": "5g6h",
@@ -144,22 +151,13 @@
       "id": "d9ba"
     },
     {
-      "id": "4306",
-      "projectId": "90b5",
-      "name": "ыыыы",
-      "status": "done",
-      "assignedTo": null,
-      "endDate": null,
-      "order": 0
-    },
-    {
-      "id": "1eb2",
-      "projectId": "90b5",
-      "name": "s",
-      "status": "in-progress",
-      "assignedTo": null,
-      "endDate": null,
-      "order": 0
+      "projectId": "3c4d",
+      "name": "Test",
+      "status": "new",
+      "assignedTo": "1",
+      "endDate": 1733961600000,
+      "order": 0,
+      "id": "da27"
     }
   ],
   "users": [

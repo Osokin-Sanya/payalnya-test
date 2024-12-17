@@ -1,52 +1,133 @@
 <template>
-  <div class="project-list">
+  <div class="p-2">
     <div class="header">
       <h1>Projects</h1>
-      <button @click="showCreateModal = true" class="btn-primary">Add Project</button>
+      <button @click="showCreateModal = true" class="btn-primary">
+        Add Project
+      </button>
     </div>
 
-    <div class="filters">
-      <input
-        v-model="filters.name"
-        type="text"
-        placeholder="Search by name..."
-        class="filter-input"
+    <div>
+      <DebouncedInput
+        :modelValue="globalFilter ?? ''"
+        @update:modelValue="(value:any) => (globalFilter = String(value))"
+        className="debounced-input"
+        placeholder="Search all columns..."
       />
-      <select v-model="filters.status" class="filter-select">
-        <option value="">All Statuses</option>
-        <option value="new">New</option>
-        <option value="in-progress">In Progress</option>
-        <option value="completed">Completed</option>
-      </select>
     </div>
+    <table>
+      <thead>
+        <tr
+          v-for="headerGroup in table.getHeaderGroups()"
+          :key="headerGroup.id"
+          class="headerGroup"
+        >
+          <th
+            v-for="header in headerGroup.headers"
+            :key="header.id"
+            :colSpan="header.colSpan"
+          >
+            <FlexRender
+              v-if="!header.isPlaceholder"
+              :render="header.column.columnDef.header"
+              :props="header.getContext()"
+            />
+            <template
+              v-if="
+                header.column.getCanFilter() &&
+                !header.column.columnDef.meta?.enableFiltering
+              "
+            >
+              <Filter :column="header.column" :table="table" />
+            </template>
+          </th>
+        </tr>
+      </thead>
+    </table>
+    <table>
+      <thead>
+        <tr
+          v-for="headerGroup in table.getHeaderGroups()"
+          :key="headerGroup.id"
+        >
+          <th
+            v-for="header in headerGroup.headers"
+            :key="header.id"
+            :colSpan="header.colSpan"
+            :class="
+              header.column.getCanSort() ? 'cursor-pointer select-none ' : ''
+            "
+            @click="header.column.getToggleSortingHandler()?.($event)"
+          >
+            <template v-if="!header.isPlaceholder" class="column-name">
+              <div class="column-name">
+                <div>
+                  <FlexRender
+                    :render="header.column.columnDef.header"
+                    :props="header.getContext()"
+                  />
+                </div>
+                <div>
+                  {{
+                    { asc: " 🔼", desc: " 🔽" }[
+                      header.column.getIsSorted() as string
+                    ]
+                  }}
+                </div>
+              </div>
+            </template>
+          </th>
+        </tr>
+      </thead>
 
-    <ResizableTable v-if="projectStore.loading === false" :columns="columns" @sort="handleSort">
-      <tr
-        v-for="project in filteredProjects"
-        :key="project.id"
-        @click="navigateToProject(project.id)"
-        class="project-row"
-      >
-        <td>{{ project.id }}</td>
-        <td>{{ project.name }}</td>
-        <td>{{ getTaskCount(project.id) }}</td>
-        <td>
-          <span :class="['status-badge', project.status]">
-            {{ project.status }}
-          </span>
-        </td>
-        <td>{{ formatDate(project.createdAt) }}</td>
-      </tr>
-    </ResizableTable>
+      <tbody>
+        <tr
+          v-for="row in table.getRowModel().rows.slice(0, 10)"
+          :key="row.id"
+          @click="navigateToProject(row.original.id)"
+        >
+          <td v-for="cell in row.getVisibleCells()" :key="cell.id">
+            <FlexRender
+              :render="cell.column.columnDef.cell"
+              :props="cell.getContext()"
+            />
+          </td>
+        </tr>
+      </tbody>
 
-    <!-- Створити модель проекту   -->
+      <tfoot>
+        <tr
+          v-for="footerGroup in table.getFooterGroups()"
+          :key="footerGroup.id"
+        >
+          <th
+            v-for="header in footerGroup.headers"
+            :key="header.id"
+            :colSpan="header.colSpan"
+          >
+            <FlexRender
+              v-if="!header.isPlaceholder"
+              :render="header.column.columnDef.footer"
+              :props="header.getContext()"
+            />
+          </th>
+        </tr>
+      </tfoot>
+    </table>
+
     <div v-if="showCreateModal" class="modal">
       <div class="modal-content">
         <h2>Create New Project</h2>
         <form @submit.prevent="createProject">
           <div class="form-group">
             <label for="name">Project Name *</label>
-            <input v-model="newProject.name" id="name" type="text" required class="form-input" />
+            <input
+              v-model="newProject.name"
+              id="name"
+              type="text"
+              required
+              class="form-input"
+            />
           </div>
           <div class="form-group">
             <label for="description">Description</label>
@@ -57,7 +138,11 @@
             ></textarea>
           </div>
           <div class="form-actions">
-            <button type="button" @click="showCreateModal = false" class="btn-secondary">
+            <button
+              type="button"
+              @click="showCreateModal = false"
+              class="btn-secondary"
+            >
               Cancel
             </button>
             <button type="submit" class="btn-primary">Create</button>
@@ -69,271 +154,317 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useProjectStore } from '@/stores/projects'
-import { useTaskStore } from '@/stores/tasks'
-import ResizableTable from '@/components/ResizableTable.vue'
-import type { TableColumn, FilterConfig, SortConfig, Project } from '@/types'
+import { ref, watch, onMounted, computed } from "vue";
+import { useProjectStore } from "@/stores/projects";
+import { useTaskStore } from "@/stores/tasks";
+import {
+  FlexRender,
+  getCoreRowModel,
+  useVueTable,
+  getSortedRowModel,
+  getFacetedMinMaxValues,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
+  getFilteredRowModel,
+} from "@tanstack/vue-table";
+import type { ColumnFiltersState } from "@tanstack/table-core";
 
-const router = useRouter()
-const projectStore = useProjectStore()
-const taskStore = useTaskStore()
+import type { Project, ProjectWithTasks } from "@/types";
+import DebouncedInput from "@/components/DebouncedInput.vue";
+import Filter from "@/components/Filter.vue";
+import { useRouter } from "vue-router";
+import { columns } from "./column.config";
 
-const columns: TableColumn[] = [
-  { key: 'id', label: 'ID', sortable: true, width: 100 },
-  { key: 'name', label: 'Name', sortable: true, width: 300 },
-  { key: 'taskCount', label: 'Tasks', sortable: true, width: 100 },
-  { key: 'status', label: 'Status', sortable: true, width: 150 },
-  { key: 'createdAt', label: 'Created At', sortable: true, width: 200 },
-]
+const projectStore = useProjectStore();
+const taskStore = useTaskStore();
+const dataProject = ref<Project[]>([]);
+const showCreateModal = ref(false);
 
-const showCreateModal = ref(false)
-const filters = ref<FilterConfig>({
-  name: '',
-  status: '',
-})
-const currentSort = ref<SortConfig>({
-  key: 'createdAt',
-  direction: 'desc',
-})
-
+const columnFilters = ref<ColumnFiltersState>([]);
+const globalFilter = ref("");
+const currentTask = ref<any>([]);
+const router = useRouter();
+const navigateToProject = (projectId: string) => {
+  router.push(`/project/${projectId}`);
+};
 const newProject = ref({
-  name: '',
-  description: '',
-})
+  name: "",
+  description: "",
+});
 
-const filteredProjects = computed(() => {
-  let result = [...projectStore.projects]
+const projectsWithTasks = computed<ProjectWithTasks[]>(() => {
+  return dataProject.value.map((project) => ({
+    ...project,
+    tasks: taskStore.getTasksByProject(project.id).length,
+  }));
+});
 
-  if (filters.value.name) {
-    result = result.filter((p) => p.name.toLowerCase().includes(filters.value.name!.toLowerCase()))
+const sorting = ref<any>([]);
+
+const table = useVueTable({
+  get data() {
+    return projectsWithTasks.value;
+  },
+  columns,
+  state: {
+    get sorting() {
+      return sorting.value;
+    },
+    get columnFilters() {
+      return columnFilters.value;
+    },
+    get globalFilter() {
+      return globalFilter.value;
+    },
+  },
+  onSortingChange: (updaterOrValue) => {
+    sorting.value =
+      typeof updaterOrValue === "function"
+        ? updaterOrValue(sorting.value)
+        : updaterOrValue;
+  },
+  onColumnFiltersChange: (updaterOrValue) => {
+    columnFilters.value =
+      typeof updaterOrValue === "function"
+        ? updaterOrValue(columnFilters.value)
+        : updaterOrValue;
+  },
+  onGlobalFilterChange: (updaterOrValue) => {
+    globalFilter.value =
+      typeof updaterOrValue === "function"
+        ? updaterOrValue(globalFilter.value)
+        : updaterOrValue;
+  },
+  getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  getFacetedRowModel: getFacetedRowModel(),
+  getFacetedUniqueValues: getFacetedUniqueValues(),
+  getFacetedMinMaxValues: getFacetedMinMaxValues(),
+  debugTable: true,
+});
+
+watch(
+  () => projectStore.projects,
+  () => {
+    dataProject.value = projectStore.projects;
   }
-
-  if (filters.value.status) {
-    result = result.filter((p) => p.status === filters.value.status)
-  }
-
-  // Сортування проектів
-  result.sort((a, b) => {
-    const key = currentSort.value.key
-    const modifier = currentSort.value.direction === 'asc' ? 1 : -1
-
-    if (key === 'taskCount') {
-      const aCount = getTaskCount(a.id)
-      const bCount = getTaskCount(b.id)
-      return (aCount - bCount) * modifier
-    }
-
-    if ((a[key as keyof Project] as any) < (b[key as keyof Project] as any)) return -1 * modifier
-    if ((a[key as keyof Project] as any) > (b[key as keyof Project] as any)) return 1 * modifier
-
-    return 0
-  })
-
-  return result
-})
-
-const getTaskCount = (projectId: string): number => {
-  return taskStore.getTasksByProject(projectId).length
-}
-
-const formatDate = (timestamp: number): string => {
-  return new Date(timestamp).toLocaleDateString()
-}
-
-const handleSort = (sortConfig: SortConfig) => {
-  currentSort.value = sortConfig
-}
-
-const navigateToProject = (id: string) => {
-  router.push(`/project/${id}`)
-}
+);
 
 const createProject = async () => {
   try {
     await projectStore.createProject({
       name: newProject.value.name,
       description: newProject.value.description,
-      status: 'new',
+      status: "new",
       createdAt: Date.now(),
-    })
-    showCreateModal.value = false
-    newProject.value = { name: '', description: '' }
+    });
+    showCreateModal.value = false;
+    newProject.value = { name: "", description: "" };
   } catch (error) {
-    console.error('Failed to create project:', error)
+    console.error("Failed to create project:", error);
   }
-}
+};
 
 onMounted(async () => {
-  await taskStore.fetchProjectTasks()
-  await projectStore.fetchProjects()
-})
+  try {
+    await projectStore.fetchProjects();
+    await taskStore.fetchProjectTasks();
+    dataProject.value = projectStore.projects.map((project) => ({
+      ...project,
+      tasks: taskStore.getTasksByProject(project.id).length,
+      enableFiltering: false,
+    }));
+    for (const project of projectStore.projects) {
+      await projectStore.updateProjectStatus(project.id);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+});
 </script>
 
 <style lang="scss" scoped>
-.project-list {
-  padding: 1.5rem;
+.p-2 {
+  padding: 1rem;
+  font-family: Arial, sans-serif;
+  color: #333;
 
   .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
 
     h1 {
-      font-size: 1.875rem;
-      font-weight: 600;
-      color: #1f2937;
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin: 0;
+    }
+
+    .btn-primary {
+      padding: 0.5rem 1rem;
+      background-color: #4caf50;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+
+      &:hover {
+        background-color: #45a049;
+      }
     }
   }
 
-  .filters {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .project-row {
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 0.375rem;
-
-    &:hover {
-      background-color: #f3f4f6;
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05);
-    }
-
-    td {
-      padding: 1rem;
-      color: #4b5563;
-    }
-  }
-
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.375rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    text-transform: capitalize;
-
-    &.new {
-      background-color: #f3f4f6;
-      color: #4b5563;
-    }
-
-    &.in-progress {
-      background-color: #dbeafe;
-      color: #1e40af;
-    }
-
-    &.completed {
-      background-color: #d1fae5;
-      color: #065f46;
-    }
-  }
-}
-
-.modal {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  backdrop-filter: blur(4px);
-
-  .modal-content {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 0.75rem;
+  table {
     width: 100%;
-    max-width: 500px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  }
-}
+    border-collapse: collapse;
+    margin-bottom: 1rem;
 
-.form-group {
-  margin-bottom: 1.5rem;
+    thead {
+      background-color: #f4f4f4;
+      .headerGroup {
+        display: flex;
+        align-items: stretch;
+      }
 
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    color: #374151;
-  }
-}
+      th {
+        padding: 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
 
-.form-input,
-.filter-input,
-.filter-select {
-  width: 100%;
-  padding: 0.625rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  background-color: white;
-  color: #1f2937;
-  transition: all 0.2s ease;
+        &.cursor-pointer {
+          cursor: pointer;
+          user-select: none;
+        }
+      }
 
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
+      .column-name {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
 
-  &::placeholder {
-    color: #9ca3af;
-  }
-}
+    tbody {
+      tr {
+        transition: background-color 0.2s;
+        cursor: zoom-in;
+        &:hover {
+          background-color: #f9f9f9;
+        }
 
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
-}
+        td {
+          padding: 0.5rem;
+          border-bottom: 1px solid #ddd;
+        }
+      }
+    }
 
-.btn-primary,
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.625rem 1.25rem;
-  border-radius: 0.5rem;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  border: none;
-  cursor: pointer;
-
-  &:hover {
-    transform: translateY(-1px);
+    tfoot {
+      th {
+        padding: 0.5rem;
+        background-color: #f4f4f4;
+      }
+    }
   }
 
-  &:active {
-    transform: translateY(0);
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .modal-content {
+      background-color: #fff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 500px;
+
+      h2 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+        text-align: center;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+
+        label {
+          display: block;
+          margin-bottom: 0.5rem;
+          font-weight: bold;
+        }
+
+        .form-input {
+          width: 100%;
+          padding: 0.5rem;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          font-size: 1rem;
+
+          &:focus {
+            outline: none;
+            border-color: #4caf50;
+            box-shadow: 0 0 3px rgba(76, 175, 80, 0.5);
+          }
+        }
+
+        textarea {
+          resize: vertical;
+          min-height: 80px;
+        }
+      }
+
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+
+        .btn-secondary {
+          background-color: #ccc;
+          color: #333;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 4px;
+          cursor: pointer;
+
+          &:hover {
+            background-color: #bbb;
+          }
+        }
+
+        .btn-primary {
+          background-color: #4caf50;
+          color: #fff;
+          border: none;
+          padding: 0.5rem 1rem;
+          border-radius: 4px;
+          cursor: pointer;
+
+          &:hover {
+            background-color: #45a049;
+          }
+        }
+      }
+    }
   }
-}
 
-.btn-primary {
-  background-color: #3b82f6;
-  color: white;
-
-  &:hover {
-    background-color: #2563eb;
-    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
-  }
-}
-
-.btn-secondary {
-  background-color: #f3f4f6;
-  color: #4b5563;
-
-  &:hover {
-    background-color: #e5e7eb;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  .debounced-input{
+    width: 50%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    margin: 10px auto;
   }
 }
 </style>

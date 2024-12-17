@@ -15,6 +15,8 @@ export const projects = {
   },
 
   async update(projectId: Project['id'], updates: Partial<Project>) {
+    console.log(updates);
+    
     return api.put<Project>(`/projects/${projectId}`, updates)
   },
 
